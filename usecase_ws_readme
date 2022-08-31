@@ -1,0 +1,215 @@
+---------------------------------------------------------------------------------------------------------------------------------------------------
+Sudo
+	Packages :	sudo apt install ssh (multi machines)
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+Conda environment
+
+	MRTA
+		
+		conda create -n MRTA python=2.7
+
+		Shebang :	#!/home/hvh/miniconda3/envs/MRTA/bin/python
+
+		Packages :
+			conda install -c conda-forge rospkg -n MRTA
+			conda install -c sotte empy -n MRTA
+			conda install -c conda-forge defusedxml -n MRTA
+			conda install -c miniconda numpy -n MRTA
+			conda install -c miniconda pyqtgraph -n MRTA
+			conda install -c miniconda yaml -n MRTA
+			conda install -c miniconda pycryptodomex -n MRTA (for fake_joint_calibration)
+			conda install -c conda-forge python-gnupg -n MRTA (for fake_joint_calibration)
+			conda install -c conda-forge matplotlib -n MRTA
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+ROS
+
+	Update all necessary packages (inside the workspace)
+		rosdep update
+		rosdep install --rosdistro melodic --ignore-src --from-paths src
+
+	Install
+		ros-melodic-map-server
+		ros-melodic-move-base
+		ros-melodic-amcl
+		ros-melodic-sbpl-lattice-planner
+		ros-melodic-eband-local-planner
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+Zsh / Bash configuration
+
+	Inside file ".zshrc" / ".bashrc" :	
+
+		conda activate MRTA	(To activate the MRTA environment)
+
+		source ~/MRTA_2020/Simulation/usecase_ws/devel/setup.zsh	(To source to devel of usecase_ws)
+
+		export PATH="$HOME:$PATH"	(To get the simplified path in shebang of MRTA algorithm)
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+Github
+
+	Create MRTA repository
+
+		cd /src
+		git init
+		git status
+		git add .
+		[git config --global user.email "vuhoi.huynh@gmail.com"]
+		[git config --global user.name "huynhvuh"]
+		git commit -m "1st commit"
+		git remote add origin https://github.com/huynhvuh/MRTA.git
+		git remote -v
+		git push origin master
+
+		git clone https://github.com/huynhvuh/MRTA.git
+
+	Clone packages
+
+		Gripper
+
+			https://github.com/Danfoa/robotiq_2finger_grippers.git
+
+			https://github.com/mgruhler/soem.git
+
+			https://github.com/ros-industrial/ros_canopen.git (melodic-devel)
+				Choose 'socketcan_interface' package
+		
+		UR5
+
+			https://github.com/ros-industrial/universal_robot.git (melodic-devel)
+
+		Mir
+
+			https://github.com/dfki-ric/mir_robot (melodic)
+
+		Turtlebot3
+
+			https://github.com/ROBOTIS-GIT/turtlebot3.git (melodic-devel)
+
+			https://github.com/ROBOTIS-GIT/turtlebot3_msgs.git (melodic-devel)
+
+			https://github.com/ROBOTIS-GIT/turtlebot3_simulations.git (melodic-devel)
+
+			Add this line to file '.zshrc' :	export TURTLEBOT3_MODEL=waffle
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+Fix
+
+	Mir
+
+		Install ekf_localization package :	https://github.com/cra-ros-pkg/robot_localization.git (melodic-devel)
+
+	UR5
+
+		Fix warning '#include <class_loader/class_loader.h>' in file 'universal_robot/ur_kinematics/src/ur_moveit_plugin.cpp' of 'ur_kinematics' package :
+			Replace by '#include <class_loader/class_loader.hpp>' 
+
+		Fix error 'hardware_interface' of 'ur_modern_driver':
+			https://github.com/iron-ox/ur_modern_driver/commit/883070d0b6c0c32b78bb1ca7155b8f3a1ead416c?diff=split
+
+		*** Fix error '[Err] [REST.cc:205] Error in REST request':
+			inside file '.ignition/fuel/config.yaml':	replace 'url: https://api.ignitionfuel.org' by 'url: https://api.ignitionrobotics.org'
+
+		*** Fix 'failed to import assimp' for moveit_commander :
+			conda activate MRTA
+			git clone https://github.com/assimp/assimp.git
+			cd ./assimp
+			mkdir build && cd build
+			cmake .. -G 'Unix Makefiles'
+			make -j4
+			cd ..
+			cd ./port/PyAssimp
+			python setup.py install		(create necessary files in /home/hvh/miniconda3/envs/MRTA/lib/python2.7/site-packages/pyassimp)
+
+	Openni camera
+
+		Install 'common_sensors' package:	https://github.com/JenniferBuehler/common-sensors.git
+
+		Install 'openni_camera' package :	https://github.com/ros-drivers/openni_camera.git
+
+		Fix 'error: expected constructor, destructor, or type conversion before ‘(’ token PLUGINLIB_REGISTER_CLASS(sensor_filter/FootprintFilter, sensor_filter::FootprintFilter, filters::FilterBase<sensor_msgs::LaserScan>)'
+			Replace in 'common-sensors-master/common_sensors/src/filters.cpp' :
+				PLUGINLIB_REGISTER_CLASS(sensor_filter/FootprintFilter, sensor_filter::FootprintFilter, filters::FilterBase<sensor_msgs::LaserScan>)
+				PLUGINLIB_REGISTER_CLASS(sensor_filter/NanToInfFilter, sensor_filter::NanToInfFilter, filters::FilterBase<sensor_msgs::LaserScan>)
+			By:
+				PLUGINLIB_EXPORT_CLASS(sensor_filter::FootprintFilter, filters::FilterBase<sensor_msgs::LaserScan>)
+				PLUGINLIB_EXPORT_CLASS(sensor_filter::NanToInfFilter, filters::FilterBase<sensor_msgs::LaserScan>)		
+
+	Robotiq_85
+
+		Fix error 'mimic_joint_plugin.cpp':
+			Replace 'mimic_joint_plugin.cpp' by:	https://github.com/roboticsgroup/roboticsgroup_gazebo_plugins/blob/master/src/mimic_joint_plugin.cpp
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+Work
+
+	- Create 'usecase_ws'
+
+	--------------------------------------------------------------------------
+
+	- Create 'usecase_gazebo' package with dependency : gazebo_ros
+
+		Copy 'launch', 'worlds' and 'models' folders into this package
+
+		Add these following lines to the package.xml of this package 
+			<export>
+				<gazebo_ros gazebo_model_path="${prefix}/models"/>
+				<gazebo_ros plugin_path="${prefix}/lib" gazebo_media_path="${prefix}"/>
+			</export>
+
+	--------------------------------------------------------------------------
+
+	- Multi machines
+
+		PC master 
+
+			hostname -I (Ex : 10.191.76.93)
+		
+			Inside file ".zshrc" / ".bashrc" :	
+				export ROS_IP=10.191.76.93
+				export ROS_MASTER_URI=http://10.191.76.93:11311
+
+		Other PC
+
+			hostname -I (Ex : 10.191.76.59)
+		
+			Inside file ".zshrc" / ".bashrc" :	
+				export ROS_IP=10.191.76.59
+				export ROS_MASTER_URI=http://10.191.76.93:11311
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+
+Use
+	Slam
+		roslaunch usecase_gazebo usecase_world.launch
+		roslaunch slam mir_slam.launch 
+		rosrun map_server map_saver
+
+	Navigation
+		roslaunch usecase_gazebo usecase_world.launch
+		roslaunch navigation mir_navigation.launch
+
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+Notes
+
+	https://github.com/olinrobotics/HIRo/wiki/MoveIt!-for-Xamyab
+
+
+
+
+
+
+
+
+
